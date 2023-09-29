@@ -9,6 +9,6 @@ RUN cargo build --target x86_64-unknown-linux-musl --release
 FROM alpine:3.18
 WORKDIR /rss_proxy
 ENV ROUTE_CONF_LOCATION="config/route_config.yaml"
-COPY --chmod=777 --from=Builder /usr/src/target/x86_64-unknown-linux-musl/release/rss_proxy ./server
-COPY ../route_config.yaml config/route_config.yaml
-CMD ["./server"]
+COPY --chmod=554 --from=Builder /usr/src/target/x86_64-unknown-linux-musl/release/endpoint_proxy ./endpoint_proxy
+COPY ./route_config.yaml config/route_config.yaml
+CMD ["./endpoint_proxy"]
