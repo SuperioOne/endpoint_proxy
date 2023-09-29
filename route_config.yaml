@@ -1,0 +1,6 @@
+proxy_urls:
+  - path: "/my-ip"
+    url: "https://api.my-ip.io/ip.json"
+    headers:
+      - name: "Accept"
+        value: "application/json"

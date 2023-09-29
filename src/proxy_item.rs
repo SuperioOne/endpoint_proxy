@@ -22,7 +22,6 @@ impl ProxyItem {
         }
     }
 
-    #[allow(dead_code)]
     pub fn set_headers<'a, I>(mut self, headers: I) -> Self where I: IntoIterator<Item=KeyValue<'a>> {
         let buffer: Vec<(HeaderName, HeaderValue)> = headers.into_iter()
             .map(|(key, value)| {
