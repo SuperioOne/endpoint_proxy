@@ -1,5 +1,5 @@
-use log::{Record, Metadata, max_level};
 use chrono::Local;
+use log::{max_level, Metadata, Record};
 
 pub struct StdLogger;
 

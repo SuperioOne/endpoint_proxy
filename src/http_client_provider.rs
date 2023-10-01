@@ -1,5 +1,5 @@
-use reqwest::Client;
 use reqwest::redirect::Policy;
+use reqwest::Client;
 
 pub struct ClientConfig {
     pub http_proxy: Option<String>,
@@ -8,16 +8,20 @@ pub struct ClientConfig {
     pub enable_cookies: bool,
 }
 
-static mut HTTP_CLIENT: Option<Client> = Option::None;
+static mut HTTP_CLIENT: Option<Client> = None;
 
-pub fn build(config: Option<ClientConfig>) -> Result<(), reqwest::Error> {
+pub fn init(config: Option<ClientConfig>) -> Result<(), reqwest::Error> {
     let mut client_builder = reqwest::ClientBuilder::new();
 
-    if let Some(cfg) = config {
-        let ClientConfig { http_proxy, user, pass, enable_cookies } = cfg;
+    if let Some(client_config) = config {
+        let ClientConfig {
+            http_proxy,
+            user,
+            pass,
+            enable_cookies,
+        } = client_config;
 
-        if let Some(proxy_url) = http_proxy
-        {
+        if let Some(proxy_url) = http_proxy {
             let mut proxy = reqwest::Proxy::all(proxy_url)?;
 
             if let (Some(user_name), Some(password)) = (user, pass) {
@@ -41,13 +45,16 @@ pub fn build(config: Option<ClientConfig>) -> Result<(), reqwest::Error> {
 
 pub fn get_client() -> &'static Client {
     unsafe {
-        if let Some(client) = &HTTP_CLIENT { client } else {
-            if let Err(_) = build(Option::None) {
-                panic!("We cannot build reqwest client.")
+        if let Some(client) = &HTTP_CLIENT {
+            client
+        } else {
+            if let Err(_) = init(Option::None) {
+                panic!("Unable to build reqwest HTTP client.")
             }
 
-            if let Some(client) = &HTTP_CLIENT
-            { client } else {
+            if let Some(client) = &HTTP_CLIENT {
+                client
+            } else {
                 panic!("Client initialized but still empty.")
             }
         }

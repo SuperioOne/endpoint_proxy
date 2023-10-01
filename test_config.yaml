@@ -1,0 +1,28 @@
+proxy_urls:
+  - path: "/my-ip"
+    url: "https://api.my-ip.io/ip.json"
+    method: "get"
+    headers:
+      - name: "Accept"
+        value: "application/json"
+  - path: "/posts"
+    url: "https://jsonplaceholder.typicode.com/posts"
+    method: "get"
+    target_method: "get"
+    headers:
+      - name: "Accept"
+        value: "application/json"
+  - path: "/posts"
+    url: "https://jsonplaceholder.typicode.com/posts"
+    method: "post"
+    default_body: |
+      {
+        "title": "foo",
+        "body": "bar",
+        "userId": 1
+      }
+    headers:
+      - name: "Accept"
+        value: "application/json"
+      - name: "Content-Type"
+        value: "application/json"
