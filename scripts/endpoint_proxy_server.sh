@@ -5,7 +5,7 @@ if [ "$ENABLE_COOKIES" = true ];then
   FLAG_ENABLE_COOKIES=1;
 fi
 
-"$BIN_LOCATION" \
+exec "$BIN_LOCATION" \
 ${ROUTE_CONF_LOCATION:+"--config-file=$ROUTE_CONF_LOCATION"} \
 ${HTTP_BIND:+"--bind=$HTTP_BIND"} \
 ${HTTP_PORT:+"--port=$HTTP_PORT"} \

@@ -45,7 +45,7 @@ bodies, and headers using a YAML configuration file.
 1. Create a `config.yaml` file.
 2. Start container with config file mounted to `/etc/endpoint_proxy/config.yaml`.
     ```shell
-     docker run -v $(pwd)/config.yaml:/etc/endpoint_proxy/config.yaml -p 8080:8080 endpoint_proxy:latest
+     docker run -v $(pwd)/config.yaml:/etc/endpoint_proxy/config.yaml -p 8080:8080 ghcr.io/superioone/endpoint_proxy:latest
     ```
 3. Test the service.
     ```shell
@@ -103,7 +103,7 @@ spec:
         name: endpoint-proxy-configmap
   containers:
     - name: myapp
-      image: <Image>
+      image: ghcr.io/superioone/endpoint_proxy:latest
       ports:
         - containerPort: 8080             # Expose the same port from 'HTTP_PORT' env variable.
       volumeMounts:
@@ -230,13 +230,13 @@ Mappings are:
 
 - **Binary:**
     ```bash
-    git clone http://update-this.git
+    git clone https://github.com/SuperioOne/endpoint_proxy.git
     cd endpoint_proxy
     cargo build --release
     ```
 - **Container image**
     ```bash
-    git clone http://update-this.git
+    git clone https://github.com/SuperioOne/endpoint_proxy.git
     cd endpoint_proxy
     buildah build -f ./container/Dockerfile -t "endpoint_proxy:latest" .
     ```
