@@ -1,6 +1,6 @@
 [package]
 name = "endpoint_proxy"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2021"
 
 [profile.release]
@@ -12,14 +12,15 @@ strip = true
 incremental = true
 
 [dependencies]
-actix-web = { version = "4.4.0", features = ["cookies", "macros", "compress-gzip", "secure-cookies", "actix-macros", "__compress", "actix-web-codegen", "cookie"], default-features = false }
+actix-web = { version = "4.4.1", features = ["default"] }
 chrono = { version = "0.4.31", features = ["clock", "std", "alloc"] }
 log = { version = "0.4.20" }
-reqwest = { version = "0.11.20", features = ["cookies", "stream", "socks"] }
-serde = { version = "1.0.188", features = ["serde_derive"] }
-serde_yaml = { version = "0.9.25" }
+reqwest = { version = "0.11.23", features = ["cookies", "socks"] }
+serde = { version = "1.0.195", features = ["serde_derive"] }
+serde_yaml = { version = "0.9.30" }
 openssl = { version = "*", features = ["vendored"] }
-futures-core = { version = "0.3.28" }
+futures-core = { version = "0.3.30" }
 bytes = { version = "1.5.0" }
-clap = { version = "4.4.6", features = ["derive"] }
-actix-cors = { version = "0.6.4" }
+clap = { version = "4.4.13", features = ["derive"] }
+actix-cors = { version = "0.7.0" }
+futures-util = "0.3.30"

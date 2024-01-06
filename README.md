@@ -1,17 +1,17 @@
 # Endpoint Proxy
 
-Endpoint Proxy is a simple HTTP proxy that allows you to skip CORS when possible, rewrite paths, method type, request
-bodies, and headers using a YAML configuration file.
+Basic HTTP utility server for map external URLs to a route with pre-configured headers, body content, HTTP methods, and
+query parameters.
 
 - [Usage](#usage)
-  - [Binary](#binary)
-  - [Docker](#docker)
-  - [Kubernetes basic example](#kubernetes-basic-example)
+    - [Binary](#binary)
+    - [Docker](#docker)
+    - [Kubernetes basic example](#kubernetes-basic-example)
 - [Server Configuration](#server-configuration)
-  - [CLI arguments](#cli-arguments)
-  - [Container environment variables](#container-environment-variables)
+    - [CLI arguments](#cli-arguments)
+    - [Container environment variables](#container-environment-variables)
 - [Endpoint Configuration](#endpoint-configuration)
-  - [Configuration options](#configuration-options)
+    - [Configuration options](#configuration-options)
 - [Building From Source](#building-from-source)
 - [License](#license)
 
@@ -24,7 +24,7 @@ bodies, and headers using a YAML configuration file.
     # config.yaml
     proxy_urls:
       - path: "/my-ip"
-        url: "https://api.my-ip.io/ip.json"
+        url: "http://ip-api.com/json"
         headers:
           - name: "Accept"
             value: "application/json"
@@ -51,6 +51,7 @@ bodies, and headers using a YAML configuration file.
     ```shell
     curl http://localhost:8080/my-ip
     ```
+
 > See [Container Environment Variables](#container-environment-variables) for available options.
 
 ### Kubernetes basic example
@@ -65,7 +66,7 @@ data:
   config.yaml: |
     proxy_urls:
       - path: /my-ip
-        url: https://api.my-ip.io/ip.json
+        url: http://ip-api.com/json
         headers:
           - name: Accept
             value: application/json
@@ -149,14 +150,14 @@ following content:
 ```yaml
 proxy_urls:
   - path: "/my-ip"
-    url: "https://api.my-ip.io/ip.json"
+    url: "http://ip-api.com/json"
     method: "get"
     headers:
       - name: "Accept"
         value: "application/json"
 ```
 
-In this example, any request to `http://localhost:8080/my-ip` will be forwarded to `https://api.my-ip.io/ip.json`
+In this example, any request to `http://localhost:8080/my-ip` will be forwarded to `http://ip-api.com/json`
 using the HTTP method `GET`. Additionally, the request will include an `Accept: application/json` header.
 
 ### Configuration options
@@ -172,7 +173,8 @@ using the HTTP method `GET`. Additionally, the request will include an `Accept: 
       used.
     - `default_body` (optional): The default request body to use if one is not provided in the incoming request.
     - `headers` (optional): A list of objects representing headers to be added to the request.
-    - `query` (optional): A list of objects representing query parameters to be added to the request.
+    - `query` (optional): A list of objects representing query parameters to be added to the request if one is not
+      provided in the incoming request.
 
 > `target_method` and `method` properties are case-sensitive and accepts the following **lowercase** HTTP
 > verbs; `get`, `post`, `put`, `delete`, `head` and `patch`.
@@ -182,7 +184,7 @@ using the HTTP method `GET`. Additionally, the request will include an `Accept: 
 ```yaml
 proxy_urls:
   - path: /my-ip
-    url: https://api.my-ip.io/ip.json
+    url: http://ip-api.com/json
     headers:
       - name: Accept
         value: application/json
@@ -221,10 +223,12 @@ proxy_urls:
 
 Mappings are:
 
-- GET: http://localhost:8080/my-ip **translates to -->** GET: https://api.my-ip.io/ip.json
+- GET: http://localhost:8080/my-ip **translates to -->** GET: http://ip-api.com/json
 - GET: http://localhost:8080/posts **translates to -->** GET: https://jsonplaceholder.typicode.com/posts
 - POST: http://localhost:8080/posts **translates to -->** POST: https://jsonplaceholder.typicode.com/posts
 - POST: http://localhost:8080/search **translates to -->** GET: https://duckduckgo.com/?t=ffab&q=alpine+linux&ia=web
+- POST: http://localhost:8080/search?q=my+query **translates to -->**
+  GET: https://duckduckgo.com/?t=ffab&q=my+query&ia=web
 
 ## Building From Source
 
@@ -234,21 +238,47 @@ Mappings are:
     cd endpoint_proxy
     cargo build --release
     ```
-- **Container image**
-    ```bash
-    git clone https://github.com/SuperioOne/endpoint_proxy.git
-    cd endpoint_proxy
-    buildah build -f ./container/Dockerfile -t "endpoint_proxy:latest" .
-    ```
+    - **Multi-architecture container image**
+      > Current script requires [buildah](https://buildah.io/) to be installed on the system.
+      ```shell
+      git clone https://github.com/SuperioOne/endpoint_proxy.git
+      cd endpoint_proxy
+         
+      ## Image primary tag.
+      export VERSION_TAG="1.1.0"
+      
+      ## Sets custom image name. default is enpoint_proxy
+      # export IMAGE_NAME=my_image_name
+      
+      ## Target registry when publishing is enabled. Make sure your buildah is already logged in to the target registry.    
+      # export REGISTRY=ghcr.io
+  
+      ## Controls --tls-verify for untrusted registries. Default is true.
+      # export VERIFY_TLS=true
+      
+      ## Specify custom Alpine image tag. Default is latest.
+      # export ALPINE_TAG=latest
+      
+      ## Additional whitespace separated alias tags like 'latest', 'v1.0', 'v1' etc.
+      # export ALIAS_TAGS="latest v1 v1.1"
+      
+      ## Only prints logs, does not build or push images. Default is false.
+      # export DRY_RUN=true
+      
+      ## Pushes generated images and manifests to the target registry. Default is false.
+      # export PUBLISH=false
+      
+      ./build_images.sh # or sudo -E ./build_images.sh
+      ```
 
 ## But Why?
 
 ![alt](https://media.tenor.com/KjJTBQ9lftsAAAAC/why-huh.gif)
 
-Technically there is not much use case.
+Technically, use cases are limited compared to fully-fledged proxy servers.
 
-I simply use it as a sidecar container to duck-tape my RSS aggregator to work with some finicky sites, a quick dirty way to bypass CORS on some 
-APIs and allow request proxying for a service that lacks built-in support.
+I simply use it as a sidecar container to duck-tape my RSS aggregator to work with some finicky sites, a quick dirty way to bypass CORS on some
+APIs.
 
 ## License
 

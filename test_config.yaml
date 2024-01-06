@@ -1,6 +1,6 @@
 proxy_urls:
   - path: "/my-ip"
-    url: "https://api.my-ip.io/ip.json"
+    url: "http://ip-api.com/json"
     method: "get"
     headers:
       - name: "Accept"
