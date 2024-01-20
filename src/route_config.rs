@@ -1,7 +1,7 @@
+use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::fs::File;
 use std::io::ErrorKind;
-use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Copy, Hash, Eq, Default)]
 #[serde(rename_all = "lowercase")]
@@ -39,8 +39,8 @@ pub struct EndpointConfigFile {
 
 impl EndpointConfigFile {
   pub fn load_from_file(file: &File) -> Result<EndpointConfigFile, std::io::Error> {
-    let path_configs: EndpointConfigFile = serde_yaml::from_reader(file)
-      .map_err(|err| std::io::Error::new(ErrorKind::Other, err))?;
+    let path_configs: EndpointConfigFile =
+      serde_yaml::from_reader(file).map_err(|err| std::io::Error::new(ErrorKind::Other, err))?;
 
     Ok(path_configs)
   }

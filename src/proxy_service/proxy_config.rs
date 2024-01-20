@@ -1,6 +1,6 @@
-use std::sync::Arc;
+use crate::route_config::HttpMethod;
 use reqwest::header::{HeaderName, HeaderValue};
-use crate::route_config::{HttpMethod};
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct Header {

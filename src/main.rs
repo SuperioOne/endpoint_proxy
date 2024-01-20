@@ -1,11 +1,14 @@
-mod std_logger;
-mod route_config;
-mod proxy_service;
 pub mod http_client;
+mod proxy_service;
+mod route_config;
+mod std_logger;
 
+use crate::proxy_service::proxy_config::ProxyConfig;
+use crate::proxy_service::proxy_factory::ProxyRouteServiceFactory;
+use crate::route_config::{EndpointConfigFile, HttpMethod};
 use crate::std_logger::StdLogger;
 use actix_cors::Cors;
-use actix_web::{App, HttpServer, web};
+use actix_web::{web, App, HttpServer};
 use clap::Parser;
 use log::{info, warn, LevelFilter};
 use std::fmt::{Display, Formatter};
@@ -13,9 +16,6 @@ use std::fs;
 use std::io::{ErrorKind, Result};
 use std::num::NonZeroUsize;
 use std::sync::Arc;
-use crate::proxy_service::proxy_config::ProxyConfig;
-use crate::proxy_service::proxy_factory::ProxyRouteServiceFactory;
-use crate::route_config::{EndpointConfigFile, HttpMethod};
 
 static LOGGER: StdLogger = StdLogger;
 
@@ -50,7 +50,10 @@ impl From<&str> for LevelFilterArg {
       "OFF" => LevelFilterArg(LevelFilter::Off),
       "TRACE" => LevelFilterArg(LevelFilter::Trace),
       value => {
-        warn!("Unexpected log level '{}', falling back to INFO level.", value);
+        warn!(
+          "Unexpected log level '{}', falling back to INFO level.",
+          value
+        );
         LevelFilterArg(LevelFilter::Info)
       }
     }
@@ -96,11 +99,18 @@ async fn main() -> Result<()> {
   info!("Worker count set to {}", &config.worker_count);
   info!("Server bind address set to '{}'", &config.bind);
   info!("Server port to '{}'", &config.port);
-  info!("Cookie store is {}",
-    if config.enable_cookies {"enabled"}
-    else {"disabled"}
+  info!(
+    "Cookie store is {}",
+    if config.enable_cookies {
+      "enabled"
+    } else {
+      "disabled"
+    }
   );
-  info!("Route configuration file path set to '{}'", &config.config_file);
+  info!(
+    "Route configuration file path set to '{}'",
+    &config.config_file
+  );
 
   let http_client_config = http_client::HttpClientConfig {
     http_proxy: config.proxy_url,
@@ -115,7 +125,8 @@ async fn main() -> Result<()> {
 
   let config_fd = fs::File::open(config.config_file)?;
   let config_file = EndpointConfigFile::load_from_file(&config_fd)?;
-  let proxy_configs: Vec<ConfigItem> = config_file.proxy_urls
+  let proxy_configs: Vec<ConfigItem> = config_file
+    .proxy_urls
     .into_iter()
     .map(|e| {
       let path = e.path.clone();
@@ -148,10 +159,11 @@ async fn main() -> Result<()> {
         HttpMethod::Delete => web::delete(),
         HttpMethod::Head => web::head(),
         HttpMethod::Patch => web::patch(),
-        _ => web::get()
+        _ => web::get(),
       };
 
-      let route_factory = ProxyRouteServiceFactory::create(http_client.clone(), config.proxy_config);
+      let route_factory =
+        ProxyRouteServiceFactory::create(http_client.clone(), config.proxy_config);
       app = app.route(&config.path, base_route.service(route_factory));
 
       info!("Route service set for {}", config.path);
@@ -159,8 +171,8 @@ async fn main() -> Result<()> {
 
     app
   })
-    .workers(config.worker_count)
-    .bind((config.bind, config.port))?
-    .run()
-    .await
+  .workers(config.worker_count)
+  .bind((config.bind, config.port))?
+  .run()
+  .await
 }

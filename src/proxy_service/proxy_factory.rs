@@ -1,10 +1,10 @@
-use std::convert::Infallible;
-use std::sync::Arc;
+use crate::proxy_service::proxy_config::ProxyConfig;
+use crate::proxy_service::proxy_route_service::ProxyRouteService;
 use actix_web::dev::{ServiceFactory, ServiceRequest, ServiceResponse};
 use futures_core::future::LocalBoxFuture;
 use reqwest::Client;
-use crate::proxy_service::proxy_config::ProxyConfig;
-use crate::proxy_service::proxy_route_service::ProxyRouteService;
+use std::convert::Infallible;
+use std::sync::Arc;
 
 pub struct ProxyRouteServiceFactory {
   pub config: Arc<ProxyConfig>,

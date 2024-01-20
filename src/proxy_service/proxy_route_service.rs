@@ -1,20 +1,20 @@
-use std::collections::HashMap;
-use std::convert::Infallible;
-use std::ops::Deref;
-use std::sync::Arc;
-use actix_web::{dev, HttpRequest, HttpResponse, ResponseError};
+use crate::proxy_service::proxy_config::ProxyConfig;
+use crate::route_config::HttpMethod;
 use actix_web::body::BoxBody;
 use actix_web::cookie::Cookie;
 use actix_web::dev::{Payload, Service, ServiceRequest, ServiceResponse};
 use actix_web::web::Query;
-use futures_core::future::{LocalBoxFuture};
+use actix_web::{dev, HttpRequest, HttpResponse, ResponseError};
+use futures_core::future::LocalBoxFuture;
 use futures_core::Stream;
 use futures_util::StreamExt;
 use log::{debug, error, warn};
-use reqwest::header::{HeaderMap};
+use reqwest::header::HeaderMap;
 use reqwest::{Client, RequestBuilder, Response};
-use crate::proxy_service::proxy_config::ProxyConfig;
-use crate::route_config::{HttpMethod};
+use std::collections::HashMap;
+use std::convert::Infallible;
+use std::ops::Deref;
+use std::sync::Arc;
 
 pub struct ProxyRouteService {
   pub(super) config: Arc<ProxyConfig>,
@@ -33,12 +33,22 @@ impl Service<ServiceRequest> for ProxyRouteService {
     let proxy_request = self.init_request(&http_request);
     let default_body = self.config.default_body.clone();
 
-    Box::pin(ProxyRouteService::exec(proxy_request, http_request, payload, default_body))
+    Box::pin(ProxyRouteService::exec(
+      proxy_request,
+      http_request,
+      payload,
+      default_body,
+    ))
   }
 }
 
 impl ProxyRouteService {
-  async fn exec(builder: RequestBuilder, http: HttpRequest, mut payload: Payload, default_body: Arc<[u8]>) -> Result<ServiceResponse, Infallible> {
+  async fn exec(
+    builder: RequestBuilder,
+    http: HttpRequest,
+    mut payload: Payload,
+    default_body: Arc<[u8]>,
+  ) -> Result<ServiceResponse, Infallible> {
     let proxy_response = {
       let (size, _) = payload.size_hint();
       let mut body_buffer: Vec<u8> = Vec::with_capacity(size);
@@ -69,9 +79,10 @@ impl ProxyRouteService {
         let response = ProxyRouteService::map_response_head(&data);
 
         match data.bytes().await {
-          Ok(bytes) => {
-            Ok(ServiceResponse::new(http, response.set_body(BoxBody::new(bytes))))
-          }
+          Ok(bytes) => Ok(ServiceResponse::new(
+            http,
+            response.set_body(BoxBody::new(bytes)),
+          )),
           Err(err) => {
             error!("Reading proxy body failed {}", err);
             let response = HttpResponse::InternalServerError().body("");
@@ -97,15 +108,14 @@ impl ProxyRouteService {
       HttpMethod::Patch => self.http_client.patch(self.config.url.as_ref()),
     };
 
-    let mut query_map = match Query::<HashMap<String, String>>::from_query(source_request.query_string()) {
-      Ok(query_params) => {
-        query_params.0
-      }
-      Err(err) => {
-        error!("Unable to parse query parameters {}", err);
-        HashMap::new()
-      }
-    };
+    let mut query_map =
+      match Query::<HashMap<String, String>>::from_query(source_request.query_string()) {
+        Ok(query_params) => query_params.0,
+        Err(err) => {
+          error!("Unable to parse query parameters {}", err);
+          HashMap::new()
+        }
+      };
 
     if let Some(query_params) = self.config.query_params.as_deref() {
       for (name, value) in query_params {
@@ -141,7 +151,9 @@ impl ProxyRouteService {
     }
 
     for cookie in response.cookies() {
-      if let Err(cookie_error) = http_response.add_cookie(&Cookie::new(cookie.name(), cookie.value())) {
+      if let Err(cookie_error) =
+        http_response.add_cookie(&Cookie::new(cookie.name(), cookie.value()))
+      {
         warn!("Unable to set cookie for {}", cookie_error)
       }
     }
