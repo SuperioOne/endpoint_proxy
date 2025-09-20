@@ -1,0 +1,13 @@
+FROM --platform=${PLATFORM} docker.io/alpine:latest AS CA_CERTS
+RUN apk --no-cache add ca-certificates && update-ca-certificates;
+
+FROM --platform=${PLATFORM} ${BASE_CONTAINER_IMAGE}
+ENV ROUTE_CONF_LOCATION="/etc/endpoint_proxy/config.yaml"
+RUN adduser -H -D -g "<endpoint_proxy>" endpoint_proxy; \
+        install -d -m 774 -o root -g "endpoint_proxy" /etc/endpoint_proxy;
+COPY --chmod=755 --chown=root:endpoint_proxy ${EXE_DIR}/endpoint_proxy /usr/local/bin/endpoint_proxy
+COPY --chmod=664 --chown=root:endpoint_proxy ./containers/config.yaml /etc/endpoint_proxy/config.yaml
+COPY --chmod=755 --chown=root:endpoint_proxy ./containers/endpoint_proxy_server.sh /usr/local/bin/endpoint_proxy_server.sh
+COPY --chmod=644 --from=CA_CERTS /etc/ssl/certs/ca-certificates.crt /usr/local/ssl/ca-certificates.crt
+USER endpoint_proxy
+CMD ["/usr/local/bin/endpoint_proxy_server.sh"]

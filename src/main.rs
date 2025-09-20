@@ -1,64 +1,16 @@
-pub mod http_client;
 mod proxy_service;
 mod route_config;
-mod std_logger;
 
-use crate::proxy_service::proxy_config::ProxyConfig;
-use crate::proxy_service::proxy_factory::ProxyRouteServiceFactory;
-use crate::route_config::{EndpointConfigFile, HttpMethod};
-use crate::std_logger::StdLogger;
+use crate::{
+  proxy_service::ProxyRouteServiceFactory,
+  route_config::{EndpointConfigFile, HttpMethod, RouteConfig},
+};
 use actix_cors::Cors;
-use actix_web::{web, App, HttpServer};
+use actix_web::{App, HttpServer, web};
 use clap::Parser;
-use log::{info, warn, LevelFilter};
-use std::fmt::{Display, Formatter};
-use std::fs;
-use std::io::{ErrorKind, Result};
-use std::num::NonZeroUsize;
-use std::sync::Arc;
-
-static LOGGER: StdLogger = StdLogger;
-
-#[derive(Clone, Debug, Copy)]
-struct LevelFilterArg(LevelFilter);
-
-impl Default for LevelFilterArg {
-  fn default() -> Self {
-    LevelFilterArg(LevelFilter::Info)
-  }
-}
-
-impl Display for LevelFilterArg {
-  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write!(f, "{}", self.0)
-  }
-}
-
-impl Into<LevelFilter> for LevelFilterArg {
-  fn into(self) -> LevelFilter {
-    self.0
-  }
-}
-
-impl From<&str> for LevelFilterArg {
-  fn from(value: &str) -> Self {
-    match value.to_uppercase().as_str() {
-      "INFO" => LevelFilterArg(LevelFilter::Info),
-      "DEBUG" => LevelFilterArg(LevelFilter::Debug),
-      "ERROR" => LevelFilterArg(LevelFilter::Error),
-      "WARN" => LevelFilterArg(LevelFilter::Warn),
-      "OFF" => LevelFilterArg(LevelFilter::Off),
-      "TRACE" => LevelFilterArg(LevelFilter::Trace),
-      value => {
-        warn!(
-          "Unexpected log level '{}', falling back to INFO level.",
-          value
-        );
-        LevelFilterArg(LevelFilter::Info)
-      }
-    }
-  }
-}
+use reqwest::redirect::Policy;
+use std::{fs, io::Result, num::NonZeroUsize, sync::Arc};
+use tracing::{Level, debug, info};
 
 #[derive(Parser, Debug)]
 #[command(rename_all = "kebab-case")]
@@ -79,72 +31,53 @@ struct Config {
   proxy_auth_user: Option<String>,
   #[arg(long)]
   proxy_auth_pass: Option<String>,
-  #[arg(long, default_value_t = LevelFilterArg::default())]
-  log_level: LevelFilterArg,
-}
-
-#[derive(Clone)]
-struct ConfigItem {
-  path: String,
-  method: HttpMethod,
-  proxy_config: Arc<ProxyConfig>,
+  #[arg(long, default_value_t = Level::INFO)]
+  log_level: Level,
 }
 
 #[actix_web::main]
 async fn main() -> Result<()> {
-  let config = Config::parse();
-  let _ = log::set_logger(&LOGGER).map(|()| log::set_max_level(config.log_level.into()));
+  let app_config = Config::parse();
 
-  info!("Log level set to {}", &config.log_level);
-  info!("Worker count set to {}", &config.worker_count);
-  info!("Server bind address set to '{}'", &config.bind);
-  info!("Server port to '{}'", &config.port);
-  info!(
-    "Cookie store is {}",
-    if config.enable_cookies {
-      "enabled"
-    } else {
-      "disabled"
+  tracing_subscriber::fmt()
+    .with_max_level(app_config.log_level)
+    .init();
+
+  debug!(message = "application config", config = ?app_config );
+
+  let http_client = {
+    let mut client_builder = reqwest::ClientBuilder::new();
+
+    if let Some(proxy_url) = &app_config.proxy_url {
+      let mut proxy = reqwest::Proxy::all(proxy_url).unwrap();
+
+      if let (Some(user_name), Some(password)) =
+        (&app_config.proxy_auth_user, &app_config.proxy_auth_pass)
+      {
+        proxy = proxy.basic_auth(user_name, password);
+      }
+
+      client_builder = client_builder.proxy(proxy);
     }
-  );
-  info!(
-    "Route configuration file path set to '{}'",
-    &config.config_file
-  );
 
-  let http_client_config = http_client::HttpClientConfig {
-    http_proxy: config.proxy_url,
-    pass: config.proxy_auth_pass,
-    user: config.proxy_auth_user,
-    enable_cookies: config.enable_cookies,
+    if app_config.enable_cookies {
+      client_builder = client_builder.cookie_store(true);
+    }
+
+    client_builder
+      .redirect(Policy::limited(5))
+      .build()
+      .map_err(|err| std::io::Error::other(err.to_string()))?
   };
 
-  let http_client = http_client_config
-    .to_client()
-    .map_err(|error| std::io::Error::new(ErrorKind::Other, error))?;
-
-  let config_fd = fs::File::open(config.config_file)?;
-  let config_file = EndpointConfigFile::load_from_file(&config_fd)?;
-  let proxy_configs: Vec<ConfigItem> = config_file
+  let config_fd = fs::File::open(app_config.config_file)?;
+  let route_configs: Vec<Arc<RouteConfig>> = EndpointConfigFile::load_from_file(&config_fd)?
     .proxy_urls
     .into_iter()
-    .map(|e| {
-      let path = e.path.clone();
-      let method = e.method.unwrap_or_default();
-      let proxy_config: ProxyConfig = e.into();
-
-      ConfigItem {
-        method,
-        path,
-        proxy_config: Arc::from(proxy_config),
-      }
-    })
+    .map(|e| Arc::from(e))
     .collect();
 
   HttpServer::new(move || {
-    // Clones configs for each worker
-    let proxies = proxy_configs.clone();
-
     let cors = Cors::default()
       .allow_any_origin()
       .allow_any_header()
@@ -152,27 +85,26 @@ async fn main() -> Result<()> {
 
     let mut app = App::new().wrap(cors);
 
-    for config in proxies.into_iter() {
+    for config in route_configs.iter() {
       let base_route = match config.method {
-        HttpMethod::Post => web::post(),
-        HttpMethod::Put => web::put(),
-        HttpMethod::Delete => web::delete(),
-        HttpMethod::Head => web::head(),
-        HttpMethod::Patch => web::patch(),
+        Some(HttpMethod::Post) => web::post(),
+        Some(HttpMethod::Put) => web::put(),
+        Some(HttpMethod::Delete) => web::delete(),
+        Some(HttpMethod::Head) => web::head(),
+        Some(HttpMethod::Patch) => web::patch(),
         _ => web::get(),
       };
 
-      let route_factory =
-        ProxyRouteServiceFactory::create(http_client.clone(), config.proxy_config);
-      app = app.route(&config.path, base_route.service(route_factory));
+      let route_service = ProxyRouteServiceFactory::new(http_client.clone(), config.clone());
 
-      info!("Route service set for {}", config.path);
+      app = app.route(&config.path, base_route.service(route_service));
+      info!(message = "New route service", path = &config.path);
     }
 
     app
   })
-  .workers(config.worker_count)
-  .bind((config.bind, config.port))?
+  .workers(app_config.worker_count)
+  .bind((app_config.bind, app_config.port))?
   .run()
   .await
 }

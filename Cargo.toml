@@ -1,26 +1,33 @@
 [package]
 name = "endpoint_proxy"
-version = "1.1.1"
-edition = "2021"
+version = "1.2.0"
+edition = "2024"
+authors = ["Timur Olur <pm@smdd.dev>"]
+description = "Simple HTTP middleware service"
+documentation = "https://github.com/SuperioOne/endpoint_proxy"
+homepage = "https://github.com/SuperioOne/endpoint_proxy"
+license = "Apache-2.0"
+repository = "https://github.com/SuperioOne/endpoint_proxy"
 
 [profile.release]
-opt-level = 3
 lto = true
-debug = false
 codegen-units = 1
 strip = true
-incremental = true
+panic = "abort"
 
 [dependencies]
-actix-web = { version = "4.4.1", features = ["default"] }
-chrono = { version = "0.4.31", features = ["clock", "std", "alloc"] }
-log = { version = "0.4.20" }
-reqwest = { version = "0.11.23", features = ["cookies", "socks"] }
-serde = { version = "1.0.195", features = ["serde_derive"] }
-serde_yaml = { version = "0.9.30" }
-openssl = { version = "*", features = ["vendored"] }
-futures-core = { version = "0.3.30" }
-bytes = { version = "1.5.0" }
-clap = { version = "4.4.13", features = ["derive"] }
-actix-cors = { version = "0.7.0" }
-futures-util = "0.3.30"
+actix-cors = { version = "0.7" }
+actix-web = { version = "4" }
+clap = { version = "4", features = ["derive"] }
+futures-util = { version = "0.3" }
+reqwest = { version = "0.12", default-features = false, features = [
+        "cookies",
+        "socks",
+        "system-proxy",
+        "charset",
+        "rustls-tls-native-roots",
+] }
+serde = { version = "1", features = ["serde_derive"] }
+serde_yaml = { version = "0.9" }
+tracing = { version = "0.1" }
+tracing-subscriber = { version = "0.3" }

@@ -1,0 +1,53 @@
+{
+  "binary": [
+    "aarch64-gnu",
+    "x86-64-gnu",
+    "x86-64-v3-gnu"
+  ],
+  "oci": {
+    "manifest": {
+      "name": "$PROJECT_NAME",
+      "tags": [
+        "$VERSION",
+        "$VERSION_MAJOR_MINOR",
+        "latest"
+      ]
+    },
+    "images": [
+      {
+        "target": "x86-64-gnu",
+        "base_image": "docker.io/busybox:stable",
+        "platform": "linux/amd64",
+        "os": "linux",
+        "arch": "amd64",
+        "variant": "",
+        "tags": [
+          "$VERSION-amd64"
+        ]
+      },
+      {
+        "target": "x86-64-v3-gnu",
+        "base_image": "docker.io/busybox:stable",
+        "platform": "linux/amd64",
+        "os": "linux",
+        "arch": "amd64",
+        "variant": "v3",
+        "tags": [
+          "$VERSION-amd64-v3",
+          "latest-amd64-v3"
+        ]
+      },
+      {
+        "target": "aarch64-gnu",
+        "base_image": "docker.io/busybox:stable",
+        "platform": "linux/arm64/v8",
+        "os": "linux",
+        "arch": "arm64",
+        "variant": "v8",
+        "tags": [
+          "$VERSION-arm64"
+        ]
+      }
+    ]
+  }
+}

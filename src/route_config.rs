@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
-use std::fmt::{Display, Formatter};
-use std::fs::File;
-use std::io::ErrorKind;
+use std::{
+  fmt::{Display, Formatter},
+  fs::File,
+};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Copy, Hash, Eq, Default)]
 #[serde(rename_all = "lowercase")]
@@ -17,19 +18,19 @@ pub enum HttpMethod {
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub struct NameValuePair {
-  pub name: String,
-  pub value: String,
+  pub name: Box<str>,
+  pub value: Box<str>,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub struct RouteConfig {
-  pub path: String,
-  pub url: String,
+  pub path: Box<str>,
+  pub url: Box<str>,
   pub query: Option<Vec<NameValuePair>>,
   pub headers: Option<Vec<NameValuePair>>,
   pub method: Option<HttpMethod>,
   pub target_method: Option<HttpMethod>,
-  pub default_body: Option<String>,
+  pub default_body: Option<Box<str>>,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
@@ -40,7 +41,7 @@ pub struct EndpointConfigFile {
 impl EndpointConfigFile {
   pub fn load_from_file(file: &File) -> Result<EndpointConfigFile, std::io::Error> {
     let path_configs: EndpointConfigFile =
-      serde_yaml::from_reader(file).map_err(|err| std::io::Error::new(ErrorKind::Other, err))?;
+      serde_yaml::from_reader(file).map_err(|err| std::io::Error::other(err))?;
 
     Ok(path_configs)
   }
